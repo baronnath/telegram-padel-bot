@@ -24,6 +24,10 @@ const loadMatches = async (owner = false) => {
 }
 
 const storeMatches = async (matches) => {
+    // Clear old matches
+    matches = await matches.filter((m) => {
+        return isFutureDate(m.dateTime); 
+    });
     await fsPromises.writeFile(fileName, JSON.stringify(matches))
         .catch((err) => {
             bot.sendMessage(
@@ -39,6 +43,16 @@ const validateDate = (string) => {
     if (!re.test(string))
         valid = false;
     return valid;
+}
+
+const isFutureDate = (date, object = true) => {
+    if(object)
+        newDate = new Date(date);
+    else {
+        d = date.split('/');
+        newDate = new Date('20'+d[2], d[1]-1, d[0]);
+    }
+    return new Date(newDate.toDateString()) > new Date(new Date().toDateString());
 }
 
 const validateTime = (string) => {
@@ -109,7 +123,7 @@ bot.onText(/\/create/, async (msg, match) => {
     bot.sendMessage(chatId, "Match date? (dd/mm/yy)").then(function () {
         answerCallbacks[chatId] = function (answer) {
             let date = answer.text;
-            if(validateDate(date))
+            if(validateDate(date) && isFutureDate(date, false))
                 bot.sendMessage(chatId, "Match time? (hh:mm military time)").then(function () {
                     answerCallbacks[chatId] = function (answer) {
                         let time = answer.text;
@@ -245,11 +259,12 @@ const joinMatch = async (cb, matchId) => {
     const chatId = cb.message.chat.id;
     await loadMatches();
 
-    if(!matchesInfo.length)
-        return noMatches();
-
     const index = await padelMatches.findIndex((m) => m.id == matchId);
    
+    // Check match date
+    if(!isFutureDate(padelMatches[index].dateTime))
+        return bot.sendMessage(chatId, "Sorry this match was already played");
+
     // Check number of players
     if(padelMatches[index].players.length >= 4)
         return bot.sendMessage(chatId, "Match is full!");
