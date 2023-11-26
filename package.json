@@ -1,7 +1,7 @@
 {
-  "name": "telegram-bot-sitepoint",
+  "name": "telegram-padel-bot",
   "version": "1.0.0",
-  "description": "Telegram bot for labelling articles",
+  "description": "Telegram bot for padel group managing",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
