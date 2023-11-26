@@ -1,7 +1,7 @@
 require('dotenv').config();
 const fs = require('fs');
 const fsPromises = fs.promises;
-const fileName = './padelMatchs.json';
+const fileName = './padelMatches.json';
 const padelMatch = require('./padelMatch');
 
 const TelegramBot = require('node-telegram-bot-api');
@@ -147,7 +147,7 @@ bot.onText(/\/list/, async (msg, match) => {
     chatId = msg.chat.id;
     matchesInfo = await getMatchesInfo();
     if(!matchesInfo.length)
-        return bot.sendMessage(chatId, 'There are no matches', {parse_mode: 'HTML'});
+        return noMatches();
     bot.sendMessage(chatId, matchesInfo, {parse_mode: 'HTML'});
 });
 
@@ -155,6 +155,10 @@ bot.onText(/\/update/, async (msg, match) => {
     await loadMatches();
     chatId = msg.chat.id;
     matchesInfo = await getMatchesInfo();
+
+    if(!matchesInfo.length)
+        return noMatches();
+
     inlineKeyboard = await createMatchesKeyboard('update');
 
     bot.sendMessage(
@@ -217,6 +221,10 @@ bot.onText(/\/join/, async (msg, match) => {
     await loadMatches();
     chatId = msg.chat.id;
     matchesInfo = await getMatchesInfo();
+
+    if(!matchesInfo.length)
+        return noMatches();
+
     inlineKeyboard = await createMatchesKeyboard('join');
 
     bot.sendMessage(
@@ -236,6 +244,10 @@ bot.onText(/\/join/, async (msg, match) => {
 const joinMatch = async (cb, matchId) => {
     const chatId = cb.message.chat.id;
     await loadMatches();
+
+    if(!matchesInfo.length)
+        return noMatches();
+
     const index = await padelMatches.findIndex((m) => m.id == matchId);
    
     // Check number of players
@@ -264,6 +276,10 @@ bot.onText(/\/leave/, async (msg, match) => {
     await loadMatches();
     chatId = msg.chat.id;
     matchesInfo = await getMatchesInfo();
+
+    if(!matchesInfo.length)
+        return noMatches();
+
     inlineKeyboard = await createMatchesKeyboard('leave');
 
     bot.sendMessage(
@@ -311,6 +327,10 @@ bot.onText(/\/delete/, async (msg, match) => {
     await loadMatches(msg.from.id);
     chatId = msg.chat.id;
     matchesInfo = await getMatchesInfo();
+
+    if(!matchesInfo.length)
+        return noMatches();
+
     inlineKeyboard = await createMatchesKeyboard('delete');
 
     bot.sendMessage(
@@ -365,7 +385,11 @@ bot.on('callback_query', (callbackQuery) => {
 
 const twoDigits = (string) => {
     return ("0" + string).slice(-2);
-} 
+}
+
+const noMatches = () => {
+    bot.sendMessage(chatId, 'There are no matches', {parse_mode: 'HTML'});
+}
 
 // Listener (handler) for telegram's /start event
 // This event happened when you start the conversation with both by the very first time
