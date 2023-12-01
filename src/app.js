@@ -45,6 +45,7 @@ const validateDate = (string) => {
     return valid;
 }
 
+// Check if date is today or later in the future
 const isFutureDate = (date, object = true) => {
     if(object)
         newDate = new Date(date);
@@ -52,7 +53,7 @@ const isFutureDate = (date, object = true) => {
         d = date.split('/');
         newDate = new Date('20'+d[2], d[1]-1, d[0]);
     }
-    return new Date(newDate.toDateString()) > new Date(new Date().toDateString());
+    return new Date(newDate.toDateString()) >= new Date(new Date().toDateString());
 }
 
 const validateTime = (string) => {
