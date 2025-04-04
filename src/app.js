@@ -78,11 +78,11 @@ const getMatchesInfo = async () => {
         const dateTime = new Date(m.dateTime);
         if(i != 0)
             matchesText += `\n\n`;
-        matchesText += `#${i+1}\nDate: <b>${dateTime.toLocaleDateString("en-US", dateOptions)}</b>\nTime: <b>${dateTime.toLocaleTimeString("en-US", timeOptions)}</b>\nPlace: <b>${m.place}</b>\nOwner: <b><a href="tg://user?id=${m.owner.id})">${m.owner.first_name}</a></b>`;
+        matchesText += `<b>Match ${i+1}</b>\n📅 Date: <b>${dateTime.toLocaleDateString("en-US", dateOptions)}</b>\n⏰ Time: <b>${dateTime.toLocaleTimeString("en-US", timeOptions)}</b>\n📍 Place: <b>${m.place}</b>`;
         // Retrieve players
         if(m.players.length){
-            matchesText += `\nPlayers: `;
-            await m.players.forEach((p) => matchesText += `<b><a href="tg://user?id=${p.id})">${p.first_name}</a></b> `);
+            matchesText += `\nPlayers:\n`;
+            await m.players.forEach((p) => matchesText += `🎾 <b><a href="t.me/${p.username})">${p.first_name}</a></b>\n`);
         }
     });
     return matchesText;
@@ -129,7 +129,7 @@ bot.onText(/\/create/, async (msg, match) => {
                     answerCallbacks[chatId] = function (answer) {
                         let time = answer.text;
                         if(validateTime(time)){
-                            bot.sendMessage(chatId, "Match place? Write \"unkown\" if already unknown").then(function () {
+                            bot.sendMessage(chatId, "Match place? Write \"TBC\" (to be confirmed) if still unknown").then(function () {
                                 answerCallbacks[chatId] = function (answer) {
                                     let dateTime = createDateTime(date, time);
                                     let place = answer.text;
@@ -415,7 +415,7 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(
         chatId,
         `
-            Welcome at <b>MariPadel</b>      
+            Welcome to <b>Pádel del Ram</b>      
             Available commands:
         
             /list - See all coming matches
