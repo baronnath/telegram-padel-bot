@@ -3,6 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const fsPromises = fs.promises;
 const fileName = './padelMatches.json';
+const historyFileName = './historyPadelMatches.csv';
 const padelMatch = require('./padelMatch');
 const TelegramBot = require('node-telegram-bot-api');
 const token = process.env.TOKEN;
@@ -24,17 +25,44 @@ const loadMatches = async (owner = false) => {
 }
 
 const storeMatches = async (matches) => {
-    // Clear old matches
-    matches = await matches.filter((m) => {
-        return isFutureDate(m.dateTime); 
-    });
-    await fsPromises.writeFile(fileName, JSON.stringify(matches))
+    // Group by past and future datetime
+    const result = Object.groupBy(matches, ({ dateTime }) =>
+        isFutureDate(dateTime) ? "future" : "past",
+    );
+
+    // // Clear old matches
+    // matches = await matches.filter((m) => {
+    //     return isFutureDate(m.dateTime); 
+    // });
+    await fsPromises.writeFile(fileName, JSON.stringify(result.future))
         .catch((err) => {
             bot.sendMessage(
                 chatId,
                 'Error! Match not saved',
             );
-        });  
+        });
+
+    try {
+        let history = "";
+
+        for (m of result.past){
+            const dateTime = new Date(m.dateTime);
+            history += `\nPàdel del Ram,${twoDigits(dateTime.getDate())}/${twoDigits(dateTime.getMonth()+1)}/${dateTime.getFullYear()},4,Partit de pàdel,${m.place},Organitzador: ${m.owner.first_name}`;
+        }
+
+        console.log(history);
+
+        fsPromises.appendFile(historyFileName, history)
+            .catch((err) => {
+                bot.sendMessage(
+                    chatId,
+                    'Error! History not saved',
+                );
+            });
+    }
+    catch(err) {
+        console.log(err);
+    }
 }
 
 const validateDate = (string) => {
@@ -407,8 +435,8 @@ const noMatches = () => {
     bot.sendMessage(chatId, 'There are no matches', {parse_mode: 'HTML'});
 }
 
-// Listener (handler) for telegram's /bookmark event
-bot.onText(/\/forecast/, async (msg, match) => {
+// Next 5 days forcast. Source Accuweather API.
+bot.onText(/\/forecast/, async (msg) => {
     const accuweatherApiKey = process.env.ACCUWEATHER_API_KEY;
     const accuweather5Days = 'https://dataservice.accuweather.com/forecasts/v1/daily/5day/307297?apikey=' + accuweatherApiKey + '&language=en-US&details=true&metric=true';
     const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -441,6 +469,16 @@ bot.onText(/\/forecast/, async (msg, match) => {
         message,
         {parse_mode: 'HTML', disable_web_page_preview: true}
     );
+});
+
+// Retrieve matches history data 
+bot.onText(/\/history/, async (msg) => {
+    try {
+        bot.sendDocument(msg.chat.id, historyFileName); 
+    }
+    catch(err) {
+        bot.sendMessage(chatId, 'Error: ' + err.message, {parse_mode: 'HTML'});
+    }
 });
 
 const getWeatherIcon = (icon) => {
