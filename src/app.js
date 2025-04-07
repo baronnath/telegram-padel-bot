@@ -428,7 +428,7 @@ bot.onText(/\/forecast/, async (msg, match) => {
             message += `${getWeatherIcon(dayForecast.Day.Icon)} <b>${dayForecast.Day.IconPhrase}</b>\n`;
             message += `<i>Min.</i> ${dayForecast.Temperature.Minimum.Value}°C <i>Max.</i> ${dayForecast.Temperature.Minimum.Value}°C\n`;
             message += `<i>Rain Prob.</i> ${dayForecast.Day.RainProbability}%\n`;
-            message += `<i>Wind</i> ${dayForecast.Day.Wind.Speed.Value} ${dayForecast.Day.Wind.Speed.Unit} \(<i>Max.</i> ${dayForecast.Day.WindGust.Speed.Value}\)</blockquote>`;
+            message += `<i>Wind</i> ${dayForecast.Day.Wind.Speed.Value} ${dayForecast.Day.Wind.Speed.Unit} \(<i>Max.</i> ${dayForecast.Day.WindGust.Speed.Value}\)</blockquote>\n`;
         }
         message += `More info <a href="${forecast.Headline.MobileLink}">here</a>`;
     }
