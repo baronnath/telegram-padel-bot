@@ -1,12 +1,12 @@
 require('dotenv').config();
+const https = require('https');
 const fs = require('fs');
 const fsPromises = fs.promises;
 const fileName = './padelMatches.json';
 const padelMatch = require('./padelMatch');
-
 const TelegramBot = require('node-telegram-bot-api');
-
 const token = process.env.TOKEN;
+
 let padelMatches = [];
 let chatId;
 
@@ -163,7 +163,7 @@ bot.onText(/\/list/, async (msg, match) => {
     matchesInfo = await getMatchesInfo();
     if(!matchesInfo.length)
         return noMatches();
-    bot.sendMessage(chatId, matchesInfo, {parse_mode: 'HTML'});
+    bot.sendMessage(chatId, matchesInfo, {parse_mode: 'HTML', disable_web_page_preview: true});
 });
 
 bot.onText(/\/update/, async (msg, match) => {
@@ -407,6 +407,74 @@ const noMatches = () => {
     bot.sendMessage(chatId, 'There are no matches', {parse_mode: 'HTML'});
 }
 
+// Listener (handler) for telegram's /bookmark event
+bot.onText(/\/forecast/, async (msg, match) => {
+    const accuweatherApiKey = process.env.ACCUWEATHER_API_KEY;
+    const accuweather5Days = 'https://dataservice.accuweather.com/forecasts/v1/daily/5day/307297?apikey=' + accuweatherApiKey + '&language=en-US&details=true&metric=true';
+    const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+    chatId = msg.chat.id;
+    let message;
+
+    try {
+        const res = await fetch(accuweather5Days);
+        const headerDate = res.headers && res.headers.date ? res.headers.date : 'no response date';
+        const forecast = await res.json();
+
+        message = '<b>BARCELONA 5 DAYS FORECAST</>\n'; 
+        for(dayForecast of forecast.DailyForecasts){
+            let d = new Date(dayForecast.Date);
+            message += `<blockquote><b>${dayNames[d.getDay()]}</b>\n`;
+            message += `${getWeatherIcon(dayForecast.Day.Icon)} <b>${dayForecast.Day.IconPhrase}</b>\n`;
+            message += `<i>Min.</i> ${dayForecast.Temperature.Minimum.Value}°C <i>Max.</i> ${dayForecast.Temperature.Minimum.Value}°C\n`;
+            message += `<i>Rain Prob.</i> ${dayForecast.Day.RainProbability}%\n`;
+            message += `<i>Wind</i> ${dayForecast.Day.Wind.Speed.Value} ${dayForecast.Day.Wind.Speed.Unit} \(<i>Max.</i> ${dayForecast.Day.WindGust.Speed.Value}\)</blockquote>`;
+        }
+        message += `More info <a href="${forecast.Headline.MobileLink}">here</a>`;
+    }
+    catch(err) {
+        bot.sendMessage(chatId, 'Error: ' + err.message, {parse_mode: 'HTML'});
+    }
+
+    bot.sendMessage(
+        chatId,
+        message,
+        {parse_mode: 'HTML', disable_web_page_preview: true}
+    );
+});
+
+const getWeatherIcon = (icon) => {
+    switch(icon){
+        case 1: return "☀"; // sun
+        case 2: return "🌤"; // sun behind small cloud
+        case 3:
+        case 4: 
+        case 5: 
+        case 6: return "🌥"; //sun behind large cloud
+        case 7:
+        case 8: return "☁"; //cloud
+        case 11: return "🌫"; // fog
+        case 12: return "🌧"; // cloud with rain
+        case 13:
+        case 14: return "🌦"; // sun behind rain cloud
+        case 15: return "🌩"; // cloud with lightning
+        case 16: 
+        case 17: return "🌧"; // cloud with rain
+        case 18: return "🌧"; // cloud with rain
+        case 19: return "☁"; //cloud
+        case 20: return "🌥"; //sun behind large cloud
+        case 21: return "🌤"; // sun behind small cloud
+        case 22: return "☁"; //cloud
+        case 23: return "🌥"; //sun behind large cloud
+        case 24: return "❄"; // snowflake
+        case 25:
+        case 26:
+        case 29: return "🌨"; // cloud with snow
+        case 32: return "🌬"; // windy
+        default: return;
+    }
+}
+
 // Listener (handler) for telegram's /start event
 // This event happened when you start the conversation with both by the very first time
 // Provide the list of available commands
@@ -423,6 +491,7 @@ bot.onText(/\/start/, (msg) => {
             /join - Join a padel match
             /leave - Leave a padel match you joined
             /update - Update match information: place, time and payment
+            /forecast - Next 5 days weather forecast
             /delete - Delete a padel match
         `, {
             parse_mode: 'HTML',
