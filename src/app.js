@@ -110,7 +110,9 @@ const getMatchesInfo = async () => {
         // Retrieve players
         if(m.players.length){
             matchesText += `\nPlayers:\n`;
-            await m.players.forEach((p) => matchesText += `🎾 <b><a href="t.me/${p.username})">${p.first_name}</a></b>\n`);
+            for (const p of m.players) {
+                matchesText += `🎾 <b><a href="https://t.me/${p.username}">${p.first_name}</a></b>\n`;
+            }
         }
     });
     return matchesText;
