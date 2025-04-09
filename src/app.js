@@ -8,6 +8,9 @@ const padelMatch = require('./padelMatch');
 const TelegramBot = require('node-telegram-bot-api');
 const token = process.env.TOKEN;
 
+const dateOptions = {weekday: 'short', month: 'short', day: 'numeric'};
+const timeOptions = {hour: '2-digit', minute: '2-digit', hour12: false};
+
 let padelMatches = [];
 let chatId;
 
@@ -100,35 +103,48 @@ const createDateTime = (date, time) => {
 
 const getMatchesInfo = async () => {
     let matchesText = '';
-    const dateOptions = {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'};
-    const timeOptions = {hour: "numeric", minute: "numeric", hour12: false};
+    
     await padelMatches.forEach(async (m, i) => {
         const dateTime = new Date(m.dateTime);
-        if(i != 0)
-            matchesText += `\n\n`;
-        matchesText += `<b>Match ${i+1}</b>\n📅 Date: <b>${dateTime.toLocaleDateString("en-US", dateOptions)}</b>\n⏰ Time: <b>${dateTime.toLocaleTimeString("en-US", timeOptions)}</b>\n📍 Place: <b>${m.place}</b>`;
+        matchesText += `<blockquote>`;
+        matchesText += `<b>Match #${i+1}</b>\n📅 <i>Date:</i> <b>${dateTime.toLocaleDateString("en-US", dateOptions)}</b>\n⏰ <i>Time:</i> <b>${dateTime.toLocaleTimeString("en-US", timeOptions)}</b>\n📍 <i>Place:</i> <b>${m.place}</b>`;
         // Retrieve players
         if(m.players.length){
-            matchesText += `\nPlayers:\n`;
+            matchesText += `\n<i>Players:</i>\n`;
             for (const p of m.players) {
                 matchesText += `🎾 <b><a href="https://t.me/${p.username}">${p.first_name}</a></b>\n`;
             }
         }
+        matchesText += `</blockquote>`;
     });
     return matchesText;
 }
 
 const createMatchesKeyboard = async (action) => {
-    let inlineKeyboard = [];
-    const options = {day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit'}
-    await padelMatches.map((m, i) => {
+    let keyboard = [];
+
+    padelMatches.forEach((m, i) => {
         const dateTime = new Date(m.dateTime);
-        inlineKeyboard.push({
-            text: `#${i+1} ${dateTime.toLocaleDateString("es-ES", options)} ${m.place}`,
-            callback_data: JSON.stringify({ action: action, matchId: String(m.id)})
-        });
+        const formattedDate = dateTime.toLocaleDateString("en-US", dateOptions);
+        const formattedTime = dateTime.toLocaleTimeString("en-US", timeOptions);
+
+        // Add buttons to the keyboard
+        keyboard.push([{
+            text: `🏓 #${i+1} ${formattedDate} ${formattedTime} | 📍 ${m.place}`,
+            callback_data: JSON.stringify({ action: action, matchId: String(m.id) }),
+        }]);
     });
-    return inlineKeyboard;
+
+    // Return the custom keyboard
+    return {
+        reply_markup: JSON.stringify({
+            inline_keyboard: keyboard,
+            resize_keyboard: true,
+            one_time_keyboard: true,
+        }),
+        parse_mode: 'HTML',
+        disable_web_page_preview: true
+    };
 }
 
 // Created instance of TelegramBot
@@ -171,7 +187,7 @@ bot.onText(/\/create/, async (msg, match) => {
                                     storeMatches(padelMatches)
                                         .then(() => bot.sendMessage(
                                             chatId,
-                                            'Match has been successfully created!',
+                                            '✅ Match has been successfully created!',
                                         ));
                                 }
                             });
@@ -204,19 +220,12 @@ bot.onText(/\/update/, async (msg, match) => {
     if(!matchesInfo.length)
         return noMatches();
 
-    inlineKeyboard = await createMatchesKeyboard('update');
+    keyboard = await createMatchesKeyboard('update');
 
     bot.sendMessage(
         chatId,
         'Which match do you want to <b>update</b>?\n\n' + matchesInfo,
-        {
-            reply_markup: JSON.stringify({
-                inline_keyboard: [inlineKeyboard],
-                resize_keyboard: true,
-                one_time_keyboard: true,
-            }),
-            parse_mode: 'HTML'
-        }
+        keyboard
     );
 });
 
@@ -247,17 +256,17 @@ const updateMatch = async (cb, matchId) => {
                                     storeMatches(padelMatches)
                                         .then(() => bot.sendMessage(
                                             chatId,
-                                            'Match has been successfully updated!',
+                                            '✅ Match has been successfully updated!',
                                         ));
                                 }
                             });
                         }
                         else
-                            bot.sendMessage(chatId, "Invalid time!");
+                            bot.sendMessage(chatId, "⚠️ Invalid time!");
                     }
                 });
             else
-                bot.sendMessage(chatId, "Invalid date!");
+                bot.sendMessage(chatId, "⚠️ Invalid date!");
         }
     });
 };    
@@ -270,19 +279,12 @@ bot.onText(/\/join/, async (msg, match) => {
     if(!matchesInfo.length)
         return noMatches();
 
-    inlineKeyboard = await createMatchesKeyboard('join');
+    keyboard = await createMatchesKeyboard('join');
 
     bot.sendMessage(
         chatId,
         'Which match do you want to <b>join</b>?\n\n' + matchesInfo,
-        {
-            reply_markup: JSON.stringify({
-                inline_keyboard: [inlineKeyboard],
-                resize_keyboard: true,
-                one_time_keyboard: true,
-            }),
-            parse_mode: 'HTML'
-        }
+        keyboard
     );
 });
 
@@ -294,11 +296,11 @@ const joinMatch = async (cb, matchId) => {
    
     // Check match date
     if(!isFutureDate(padelMatches[index].dateTime))
-        return bot.sendMessage(chatId, "Sorry this match was already played");
+        return bot.sendMessage(chatId, "⚠️ Sorry this match was already played");
 
     // Check number of players
     if(padelMatches[index].players.length >= 4)
-        return bot.sendMessage(chatId, "Match is full!");
+        return bot.sendMessage(chatId, "⚠️ Match is full!");
 
     // Check player is not already enrolled
     if(padelMatches[index].players.length) {
@@ -306,7 +308,7 @@ const joinMatch = async (cb, matchId) => {
             return p.id != cb.from.id;
         });
         if(!valid)
-            return bot.sendMessage(chatId, "You are already enrolled!");
+            return bot.sendMessage(chatId, "⚠️ You are already enrolled!");
     }
 
     // Add player
@@ -314,7 +316,7 @@ const joinMatch = async (cb, matchId) => {
     storeMatches(padelMatches)
         .then(() => bot.sendMessage(
             chatId,
-            'You joined the match successfully!',
+            '✅ You joined the match successfully!',
         ));
 };
 
@@ -326,19 +328,12 @@ bot.onText(/\/leave/, async (msg, match) => {
     if(!matchesInfo.length)
         return noMatches();
 
-    inlineKeyboard = await createMatchesKeyboard('leave');
+    keyboard = await createMatchesKeyboard('leave');
 
     bot.sendMessage(
         chatId,
         'Which match do you want to <b>leave</b>?\n\n' + matchesInfo,
-        {
-            reply_markup: JSON.stringify({
-                inline_keyboard: [inlineKeyboard],
-                resize_keyboard: true,
-                one_time_keyboard: true,
-            }),
-            parse_mode: 'HTML'
-        }
+        keyboard
     );
 });
 
@@ -349,12 +344,12 @@ const leaveMatch = async (cb, matchId) => {
    
     // Check number of players
     if(!padelMatches[index].players.length)
-        return bot.sendMessage(chatId, "There are no players");
+        return bot.sendMessage(chatId, "❌ There are no players");
     
     let valid = await padelMatches[index].players.find((p) => p.id == cb.from.id);
 
     if(valid == undefined)
-        return bot.sendMessage(chatId, "You are not enrolled on this match!");
+        return bot.sendMessage(chatId, "❌ You are not enrolled on this match!");
 
     let filteredPlayers = await padelMatches[index].players.filter((p) => {
         return p.id != cb.from.id;
@@ -365,7 +360,7 @@ const leaveMatch = async (cb, matchId) => {
     storeMatches(padelMatches)
         .then(() => bot.sendMessage(
             chatId,
-            'You left the match',
+            '✅ You left the match',
         ));
 };
 
@@ -377,19 +372,12 @@ bot.onText(/\/delete/, async (msg, match) => {
     if(!matchesInfo.length)
         return noMatches();
 
-    inlineKeyboard = await createMatchesKeyboard('delete');
+    keyboard = await createMatchesKeyboard('delete');
 
     bot.sendMessage(
         chatId,
         'Which match do you want to <b>delete</b>? <em>Only matches you own</em>\n\n' + matchesInfo,
-        {
-            reply_markup: JSON.stringify({
-                inline_keyboard: [inlineKeyboard],
-                resize_keyboard: true,
-                one_time_keyboard: true,
-            }),
-            parse_mode: 'HTML'
-        }
+        keyboard
     );
 });
 
@@ -403,7 +391,7 @@ const deleteMatch = async (cb, matchId) => {
     storeMatches(padelMatches)
         .then(() => bot.sendMessage(
             chatId,
-            'Match deleted',
+            '✅ Match deleted',
         ));
 };
 
@@ -522,18 +510,22 @@ bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
     bot.sendMessage(
         chatId,
-        `
-            Welcome to <b>Pádel del Ram</b>      
-            Available commands:
-        
-            /list - See all coming matches
-            /create - Create a padel match
-            /join - Join a padel match
-            /leave - Leave a padel match you joined
-            /update - Update match information: place, time and payment
-            /forecast - Next 5 days weather forecast
-            /delete - Delete a padel match
-        `, {
+`
+<b>Welcome to Pádel del Ram</b> 🎾
+
+<i>Available commands:</i>
+
+➡️ <b>/list</b> - See all upcoming matches
+➡️ <b>/create</b> - Create a new padel match
+➡️ <b>/join</b> - Join a padel match
+➡️ <b>/leave</b> - Leave a padel match you joined
+➡️ <b>/update</b> - Update match information: place, time, and payment
+➡️ <b>/forecast</b> - View the weather forecast for the next 5 days
+➡️ <b>/delete</b> - Delete a padel match
+
+<i>Enjoy the game!</i>
+`
+        , {
             parse_mode: 'HTML',
         }
     );
