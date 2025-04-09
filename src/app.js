@@ -41,7 +41,7 @@ const storeMatches = async (matches) => {
         .catch((err) => {
             bot.sendMessage(
                 chatId,
-                'Error! Match not saved',
+                '❌ Error! Match not saved',
             );
         });
 
@@ -59,7 +59,7 @@ const storeMatches = async (matches) => {
             .catch((err) => {
                 bot.sendMessage(
                     chatId,
-                    'Error! History not saved',
+                    '❌ Error! History not saved',
                 );
             });
     }
@@ -193,11 +193,11 @@ bot.onText(/\/create/, async (msg, match) => {
                             });
                         }
                         else
-                            bot.sendMessage(chatId, "Invalid time!");
+                            bot.sendMessage(chatId, "❌ Invalid time!");
                     }
                 });
             else
-                bot.sendMessage(chatId, "Invalid date!");
+                bot.sendMessage(chatId, "❌ Invalid date!");
         }
     });
 });
@@ -413,7 +413,7 @@ bot.on('callback_query', (callbackQuery) => {
             deleteMatch(callbackQuery, data.matchId);
             break;
         default:
-            bot.sendMessage(chatId, "Action not recognized");
+            bot.sendMessage(chatId, "❌ Action not recognized");
     }
 });
 
@@ -422,7 +422,7 @@ const twoDigits = (string) => {
 }
 
 const noMatches = () => {
-    bot.sendMessage(chatId, 'There are no matches', {parse_mode: 'HTML'});
+    bot.sendMessage(chatId, '❌ There are no matches', {parse_mode: 'HTML'});
 }
 
 // Next 5 days forcast. Source Accuweather API.
@@ -451,7 +451,7 @@ bot.onText(/\/forecast/, async (msg) => {
         message += `More info <a href="${forecast.Headline.MobileLink}">here</a>`;
     }
     catch(err) {
-        bot.sendMessage(chatId, 'Error: ' + err.message, {parse_mode: 'HTML'});
+        bot.sendMessage(chatId, '❌ Error: ' + err.message, {parse_mode: 'HTML'});
     }
 
     bot.sendMessage(
