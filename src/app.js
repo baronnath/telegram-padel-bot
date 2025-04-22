@@ -37,34 +37,48 @@ const storeMatches = async (matches) => {
     // matches = await matches.filter((m) => {
     //     return isFutureDate(m.dateTime); 
     // });
-    await fsPromises.writeFile(fileName, JSON.stringify(result.future))
+
+    // If future events is undefined, an empty array is stored.  
+    let future;
+    future = result.future;
+        console.log("result.future: "+result.future);
+    if (typeof future == 'undefined'){
+        console.log("FUTURE: "+future);
+        future = [];
+    }
+
+    fsPromises.writeFile(fileName, JSON.stringify(future))
         .catch((err) => {
             bot.sendMessage(
                 chatId,
                 '❌ Error! Match not saved',
             );
+            return;
         });
 
-    try {
-        let history = "";
+    // Save past events data in CSV file
+    if (typeof result.past !== 'undefined'){
+        try {
+            let history = "";
 
-        for (m of result.past){
-            const dateTime = new Date(m.dateTime);
-            history += `\nPàdel del Ram,${twoDigits(dateTime.getDate())}/${twoDigits(dateTime.getMonth()+1)}/${dateTime.getFullYear()},4,Partit de pàdel,${m.place},Organitzador: ${m.owner.first_name}`;
+            for (m of result.past){
+                const dateTime = new Date(m.dateTime);
+                history += `\nPàdel del Ram,${twoDigits(dateTime.getDate())}/${twoDigits(dateTime.getMonth()+1)}/${dateTime.getFullYear()},4,Partit de pàdel,${m.place},Organitzador: ${m.owner.first_name}`;
+            }
+
+            console.log(history);
+
+            fsPromises.appendFile(historyFileName, history)
+                .catch((err) => {
+                    bot.sendMessage(
+                        chatId,
+                        '❌ Error! History not saved',
+                    );
+                });
         }
-
-        console.log(history);
-
-        fsPromises.appendFile(historyFileName, history)
-            .catch((err) => {
-                bot.sendMessage(
-                    chatId,
-                    '❌ Error! History not saved',
-                );
-            });
-    }
-    catch(err) {
-        console.log(err);
+        catch(err) {
+            console.log(err);
+        }
     }
 }
 
